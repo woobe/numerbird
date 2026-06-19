@@ -90,6 +90,7 @@
       spawnInterval: SPAWN_INTERVAL_MIN,
       lastTime: 0,
       deathTimer: 0,
+      bgOffset: 0,
     };
 
     // --- Player ---
@@ -109,6 +110,7 @@
       game.spawnTimer = 0;
       game.spawnInterval = SPAWN_INTERVAL_MIN;
       game.deathTimer = 0;
+      game.bgOffset = 0;
     }
     resetGame();
 
@@ -122,9 +124,18 @@
     let playerImageLoaded = false;
     playerImage.onload = () => { playerImageLoaded = true; };
     playerImage.src = PLAYER_IMAGE_SRC;
-    // --- Background asset placeholder ---
-    // TODO: assign image URLs and wire into drawGame() to replace shape rendering
-    const BACKGROUND_IMAGE_SRC = null;
+    // --- Background asset ---
+    const BACKGROUND_IMAGE_SRC = 'assets/background.jpg';
+    const bgImage = new Image();
+    let bgImageLoaded = false;
+    let bgNaturalW = 1200;
+    let bgNaturalH = 600;
+    bgImage.onload = () => {
+      bgImageLoaded = true;
+      bgNaturalW = bgImage.naturalWidth;
+      bgNaturalH = bgImage.naturalHeight;
+    };
+    bgImage.src = BACKGROUND_IMAGE_SRC;
 
     // --- Input ---
     function handleJump() {
@@ -135,9 +146,8 @@
       } else if (game.state === State.PLAYING) {
         player.velocityY = JUMP_VELOCITY;
       } else if (game.state === State.GAME_OVER) {
-        game.state = State.PLAYING;
-        resetGame();
-        player.velocityY = JUMP_VELOCITY;
+        game.state = State.MENU;
+        game.deathTimer = 0;
       }
     }
 
@@ -167,8 +177,9 @@
     }
 
     function spawnObstacle() {
-      const minGapY = 100;
-      const maxGapY = LOGICAL_HEIGHT - GAP_SIZE - 100;
+      const MIN_BAR_HEIGHT = Math.round(LOGICAL_HEIGHT * 0.05); // 30px min on each bar
+      const minGapY = MIN_BAR_HEIGHT + GAP_SIZE / 2;
+      const maxGapY = LOGICAL_HEIGHT - MIN_BAR_HEIGHT - GAP_SIZE / 2;
       const gapY = minGapY + Math.random() * (maxGapY - minGapY);
       game.obstacles.push({
         x: LOGICAL_WIDTH,
@@ -194,6 +205,9 @@
           player.y = LOGICAL_HEIGHT - player.height;
           game.state = State.GAME_OVER;
         }
+
+        // Parallax background scroll (30% of obstacle speed)
+        game.bgOffset += SPEED * 0.3 * dt;
 
         // Spawn obstacles (dt-accumulated timer)
         game.spawnTimer += dt;
@@ -245,24 +259,17 @@
         ctx.translate((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
       }
 
-      // Background
+      // Background fill (fallback if bg image hasn't loaded)
       ctx.fillStyle = '#0a0e17';
       ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
-      // Grid lines every 40px
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < LOGICAL_WIDTH; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, LOGICAL_HEIGHT);
-        ctx.stroke();
-      }
-      for (let y = 0; y < LOGICAL_HEIGHT; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(LOGICAL_WIDTH, y);
-        ctx.stroke();
+      // Parallax background image (scrolls at 30% of obstacle speed)
+      if (bgImageLoaded) {
+        const bgW = Math.round(bgNaturalW * (LOGICAL_HEIGHT / bgNaturalH));
+        const bgH = LOGICAL_HEIGHT;
+        const bgX = -(game.bgOffset % bgW);
+        ctx.drawImage(bgImage, 0, 0, bgNaturalW, bgNaturalH, bgX, 0, bgW, bgH);
+        ctx.drawImage(bgImage, 0, 0, bgNaturalW, bgNaturalH, bgX + bgW, 0, bgW, bgH);
       }
 
       if (game.state === State.MENU) {
@@ -287,13 +294,23 @@
       }
     }
 
+    let bestScore = 0;
+
     function drawMenu() {
+      if (game.score > bestScore) bestScore = game.score;
+      if (bestScore > 0) {
+        ctx.font = 'bold 18px Courier New, monospace';
+        ctx.fillStyle = '#00d4aa';
+        ctx.textAlign = 'center';
+        ctx.fillText('ATH: 1 NMR ≈ $' + bestScore, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 80);
+      }
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 48px Courier New, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('NUMERBIRD', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 40);
+      ctx.fillText('NUMERBIRD', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 30);
+      ctx.fillStyle = '#ffffff';
       ctx.font = '18px Courier New, monospace';
-      ctx.fillText('Press SPACE or Tap to Start', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 20);
+      ctx.fillText('Press SPACE or Tap to Start', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 30);
     }
 
     function drawGame() {
@@ -344,7 +361,7 @@
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 32px Courier New, monospace';
       ctx.textAlign = 'left';
-      ctx.fillText('NMR=$' + game.score, 20, 50);
+      ctx.fillText('1 NMR ≈ $' + game.score, 20, 50);
 
       // Player — sprite image (with fallback rectangle)
       if (playerImageLoaded) {
@@ -384,7 +401,7 @@
       // Score
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 24px Courier New, monospace';
-      ctx.fillText('Score: ' + game.score, LOGICAL_WIDTH / 2, panelY + 110);
+      ctx.fillText('1 NMR ≈ $' + game.score, LOGICAL_WIDTH / 2, panelY + 110);
 
       // Restart prompt
       ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';

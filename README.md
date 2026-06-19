@@ -1,28 +1,30 @@
-# Numerbird 🐦📈
+# Numerbird 🐊📈
 
-A 2D Flappy Bird clone with a **Numerai data-science theme**. Built with vanilla HTML5, CSS, and the Canvas API — zero dependencies, deployable anywhere.
+A 2D Flappy Bird clone with a **Numerai data-science tournament theme**. Built with vanilla HTML5, CSS, and the Canvas API — zero dependencies, deployable anywhere.
 
-Navigate a glowing diamond through volatile stock-market obstacle bars in a dark, data-grid arena. Each gap you clear scores a point. Hit a bar or the ground and it's Game Over.
+Navigate a pixel-art alligator with a rocket launcher through stock-chart obstacle bars set against a scrolling Tokyo cityscape. Each gap you clear scores `1 NMR ≈ $1`. Hit a bar or the ground and it's Game Over.
 
-## Gameplay
+## Play
+
+Open `index.html` in any modern browser.
 
 | Control | Action |
 |---------|--------|
-| **Spacebar** | Jump / Start / Restart |
-| **Click** | Jump / Start / Restart |
-| **Tap (mobile)** | Jump / Start / Restart |
+| **Spacebar** | Jump / Start |
+| **Click** | Jump / Start |
+| **Tap (mobile)** | Jump / Start |
 
-- Guide the **Numerai diamond** through gaps in stock-chart obstacles
-- Each gap passed = **1 point**
-- Hit an obstacle or the ground → Game Over
-- One press restarts immediately
+- Menu shows your **ATH (All-Time High)** score above the title
+- Game Over → Menu → Start (no instant restart)
 
 ## Visual Theme
 
-- **Background:** Dark science-grid (`#0a0e17` with subtle 40px grid lines)
-- **Obstacles:** Stock-market chart bars in teal/green (`#00d4aa`) with glowing borders and candle wicks
-- **Player:** A red/orange Numerai diamond with glow effect
+- **Background:** Parallax-scrolling Tokyo cityscape at night with stock chart overlay (`background.jpg`, 1200×600)
+- **Obstacles:** Stock-market chart bars in teal (`#00d4aa`) with glowing borders and candle wicks
+- **Player:** Pixel-art alligator in hoodie with rocket launcher (`player.png`, 120×120 visual, 80×80 collision hitbox)
+- **Effects:** CRT scanline overlay, grey soft-glow edge on player, gentle screen shake on death
 - **Typography:** Courier New monospace — terminal/data-science aesthetic
+- **Display:** Auto-resizing canvas fills viewport height at 2:3 ratio, DPR-aware for Retina sharpness
 
 ## Customization
 
@@ -33,28 +35,28 @@ All gameplay constants are at the top of the `<script>` section in `index.html`:
 | `GRAVITY` | 0.5 | Falling speed (higher = faster fall) |
 | `JUMP_VELOCITY` | -8 | Jump strength (negative = upward) |
 | `SPEED` | 3 | Obstacle scroll speed |
-| `GAP_SIZE` | 150 | Vertical gap between bars (smaller = harder) |
+| `GAP_SIZE` | 270 | Vertical gap between bars (smaller = harder) |
 | `SPAWN_INTERVAL_MIN` | 90 | Minimum frames between obstacle spawns |
 | `SPAWN_INTERVAL_MAX` | 120 | Maximum frames between obstacle spawns |
 
 ## Swapping Assets
 
-To replace the placeholder graphics with custom sprites, edit the asset constants at the top of the game script:
+Assets live in the `assets/` folder. Edit the source paths at the top of the game script:
 
 ```javascript
-const PLAYER_IMAGE_SRC = null;     // ← set to URL/path of player sprite
-const OBSTACLE_IMAGE_SRC = null;   // ← set to URL/path of obstacle sprite
-const BACKGROUND_IMAGE_SRC = null; // ← set to URL/path of background image
+const PLAYER_IMAGE_SRC = 'assets/player.png';      // 120×120 RGBA PNG
+const BACKGROUND_IMAGE_SRC = 'assets/background.jpg'; // wide panoramic, auto-scaled
+const OBSTACLE_IMAGE_SRC = null;                     // set to replace teal bars
 ```
 
-When set to a valid image source, wire them into `drawGame()` in the rendering section to replace the canvas-drawn shapes.
+- **Player:** Auto-scaled from source dimensions, collision is always 80×80 centered in visual
+- **Background:** Auto-detected dimensions, fills canvas height, scrolls at 30% of obstacle speed with seamless wrap
 
 ## Deployment (GitHub Pages)
 
 ```bash
-# Push to main branch
-git add index.html README.md
-git commit -m "Initial release"
+git add .
+git commit -m "v0.2"
 git push origin main
 ```
 
@@ -62,20 +64,25 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
+### v0.2 — Parallax + Retro Feel + Polished UX (current)
+
+- ✨ Parallax background (Tokyo cityscape at night with stock chart overlay)
+- 🎨 Pixel-art alligator with rocket launcher (120×120 visual, 80×80 collision)
+- 🔲 CRT scanline overlay and pixel-perfect rendering
+- 📉 Score displays as `1 NMR ≈ $X` in-game and on Game Over
+- 🏆 Session ATH tracking displayed on title screen
+- 🎮 Proper menu flow (GAME_OVER → MENU → PLAYING)
+- 📐 Auto-resize canvas with Retina DPR support
+- 📊 Minimum 5% bar height on obstacles
+
 ### v0.1 — First Working Prototype
 
-Initial release. Core gameplay loop is functional:
-
-- Gravity-based player movement with jump on Space / tap / click
-- Stock-chart-bar obstacles that spawn from the right and scroll left
-- Score counter that increments on each gap passed
-- AABB collision detection (obstacles + ground)
-- Game Over screen with score and instant restart
-- Three game states: MENU → PLAYING → GAME_OVER
+- Core gameplay loop with delta-time physics
+- Stock-chart-bar obstacles with AABB collision
+- Numerai diamond player placeholder
 - Dark data-science grid background
-- Numerai diamond player placeholder (easy sprite swap)
-- Frame-rate-independent physics (delta-time)
-- Responsive canvas (desktop + mobile)
+- Desktop + mobile input
+- Responsive canvas with CSS aspect-ratio scaling
 - Zero dependencies — single `index.html` file
 
 ## Tech Stack
