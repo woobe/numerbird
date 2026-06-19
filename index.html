@@ -20,6 +20,7 @@
       left: 0;
       right: 0;
       margin: auto;
+      image-rendering: pixelated;
     }
   </style>
 </head>
@@ -29,6 +30,7 @@
     // --- Canvas setup ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
 
     // Logical game resolution (coordinates stay 400×600)
     const LOGICAL_WIDTH = 400;
@@ -87,6 +89,7 @@
       spawnTimer: 0,
       spawnInterval: SPAWN_INTERVAL_MIN,
       lastTime: 0,
+      deathTimer: 0,
     };
 
     // --- Player ---
@@ -105,6 +108,7 @@
       game.obstacles = [];
       game.spawnTimer = 0;
       game.spawnInterval = SPAWN_INTERVAL_MIN;
+      game.deathTimer = 0;
     }
     resetGame();
 
@@ -225,10 +229,22 @@
           }
         }
       }
+
+      // Track death timer for shake/flash effect
+      if (game.state === State.GAME_OVER) {
+        game.deathTimer += dt * 16.667;
+      }
     }
 
     // --- Draw ---
     function draw() {
+      // Shake effect on death (±1.5px for 200ms — gentle arcade feedback)
+      const shaking = game.deathTimer > 0 && game.deathTimer < 200;
+      if (shaking) {
+        ctx.save();
+        ctx.translate((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
+      }
+
       // Background
       ctx.fillStyle = '#0a0e17';
       ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -257,6 +273,17 @@
 
       if (game.state === State.GAME_OVER) {
         drawGameOver();
+      }
+
+      // End shake transform
+      if (shaking) {
+        ctx.restore();
+      }
+
+      // CRT scanline overlay (always on top, unaffected by shake)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      for (let y = 0; y < LOGICAL_HEIGHT; y += 4) {
+        ctx.fillRect(0, y, LOGICAL_WIDTH, 2);
       }
     }
 
@@ -317,7 +344,7 @@
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 32px Courier New, monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(game.score.toString(), 20, 50);
+      ctx.fillText('NMR=$' + game.score, 20, 50);
 
       // Player — sprite image (with fallback rectangle)
       if (playerImageLoaded) {
