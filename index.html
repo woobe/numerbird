@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Numerbird</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0e17;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    // --- Canvas setup ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- Constants ---
+    const GRAVITY = 0.5;
+    const JUMP_VELOCITY = -8;
+    const SPEED = 3;
+    const GAP_SIZE = 150;
+    const SPAWN_INTERVAL_MIN = 90;
+    const SPAWN_INTERVAL_MAX = 120;
+    const PLAYER_X = 80;
+    const PLAYER_WIDTH = 30;
+    const PLAYER_HEIGHT = 30;
+
+    // --- Game state ---
+    const State = { MENU: 0, PLAYING: 1, GAME_OVER: 2 };
+
+    const game = {
+      state: State.MENU,
+      score: 0,
+      obstacles: [],
+      spawnTimer: 0,
+      spawnInterval: SPAWN_INTERVAL_MIN,
+      lastTime: 0,
+    };
+
+    // --- Player ---
+    const player = {
+      x: PLAYER_X,
+      y: 0,
+      width: PLAYER_WIDTH,
+      height: PLAYER_HEIGHT,
+      velocityY: 0,
+    };
+
+    function resetGame() {
+      player.y = canvas.height / 2;
+      player.velocityY = 0;
+      game.score = 0;
+      game.obstacles = [];
+      game.spawnTimer = 0;
+      game.spawnInterval = SPAWN_INTERVAL_MIN;
+    }
+    resetGame();
+
+    // --- Obstacle asset placeholder ---
+    // TODO: assign image URLs and wire into drawGame() to replace shape rendering
+    const OBSTACLE_IMAGE_SRC = null;
+    // --- Player asset placeholder ---
+    // TODO: assign image URLs and wire into drawGame() to replace shape rendering
+    const PLAYER_IMAGE_SRC = null;
+    // --- Background asset placeholder ---
+    // TODO: assign image URLs and wire into drawGame() to replace shape rendering
+    const BACKGROUND_IMAGE_SRC = null;
+
+    // --- Input ---
+    function handleJump() {
+      if (game.state === State.MENU) {
+        game.state = State.PLAYING;
+        resetGame();
+        player.velocityY = JUMP_VELOCITY;
+      } else if (game.state === State.PLAYING) {
+        player.velocityY = JUMP_VELOCITY;
+      } else if (game.state === State.GAME_OVER) {
+        game.state = State.PLAYING;
+        resetGame();
+        player.velocityY = JUMP_VELOCITY;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleJump();
+      }
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleJump();
+    });
+
+    canvas.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleJump();
+    });
+
+    function checkCollision(a, b) {
+      const padding = 2; // fairness padding
+      return a.x < b.x + b.width - padding &&
+             a.x + a.width > b.x + padding &&
+             a.y < b.y + b.height - padding &&
+             a.y + a.height > b.y + padding;
+    }
+
+    function spawnObstacle() {
+      const minGapY = 100;
+      const maxGapY = canvas.height - GAP_SIZE - 100;
+      const gapY = minGapY + Math.random() * (maxGapY - minGapY);
+      game.obstacles.push({
+        x: canvas.width,
+        gapY: gapY,
+        gapSize: GAP_SIZE,
+        width: 60,
+        scored: false,
+      });
+    }
+
+    // --- Update ---
+    function update(dt) {
+      if (game.state === State.PLAYING) {
+        // Player physics
+        player.velocityY += GRAVITY * dt;
+        player.y += player.velocityY * dt;
+
+        // Ceiling clamp
+        if (player.y < 0) player.y = 0;
+
+        // Ground check — clamp y before game-over to prevent clipping
+        if (player.y + player.height > canvas.height) {
+          player.y = canvas.height - player.height;
+          game.state = State.GAME_OVER;
+        }
+
+        // Spawn obstacles (dt-accumulated timer)
+        game.spawnTimer += dt;
+        if (game.spawnTimer >= game.spawnInterval) {
+          spawnObstacle();
+          const delay = SPAWN_INTERVAL_MIN + Math.floor(Math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN));
+          game.spawnInterval = delay;
+          game.spawnTimer = 0;
+        }
+
+        // Move obstacles
+        for (let i = game.obstacles.length - 1; i >= 0; i--) {
+          const obs = game.obstacles[i];
+          obs.x -= SPEED * dt;
+
+          // Scoring
+          if (!obs.scored && obs.x + obs.width < player.x) {
+            obs.scored = true;
+            game.score++;
+          }
+
+          // Collision detection
+          const topBar = { x: obs.x, y: 0, width: obs.width, height: obs.gapY - obs.gapSize / 2 };
+          const bottomBar = { x: obs.x, y: obs.gapY + obs.gapSize / 2, width: obs.width, height: canvas.height - (obs.gapY + obs.gapSize / 2) };
+
+          if (checkCollision(player, topBar) || checkCollision(player, bottomBar)) {
+            game.state = State.GAME_OVER;
+          }
+
+          // Remove off-screen
+          if (obs.x + obs.width < 0) {
+            game.obstacles.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    // --- Draw ---
+    function draw() {
+      // Background
+      ctx.fillStyle = '#0a0e17';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid lines every 40px
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      if (game.state === State.MENU) {
+        drawMenu();
+      } else if (game.state === State.PLAYING || game.state === State.GAME_OVER) {
+        drawGame();
+      }
+
+      if (game.state === State.GAME_OVER) {
+        drawGameOver();
+      }
+    }
+
+    function drawMenu() {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px Courier New, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('NUMERBIRD', canvas.width / 2, canvas.height / 2 - 40);
+      ctx.font = '18px Courier New, monospace';
+      ctx.fillText('Press SPACE or Tap to Start', canvas.width / 2, canvas.height / 2 + 20);
+    }
+
+    function drawGame() {
+      // --- Obstacles (stock-chart bar style) ---
+      for (const obs of game.obstacles) {
+        const topHeight = obs.gapY - obs.gapSize / 2;
+        const bottomY = obs.gapY + obs.gapSize / 2;
+        const bottomHeight = canvas.height - bottomY;
+
+        // Bar border highlight
+        ctx.fillStyle = '#00e6b5';
+        ctx.shadowColor = '#00d4aa';
+        ctx.shadowBlur = 6;
+
+        // Top bar
+        ctx.fillRect(obs.x, 0, obs.width, topHeight);
+        // Bottom bar
+        ctx.fillRect(obs.x, bottomY, obs.width, bottomHeight);
+
+        // Inner fill (darker)
+        ctx.fillStyle = '#00d4aa';
+        ctx.shadowBlur = 0;
+        ctx.fillRect(obs.x + 3, 3, obs.width - 6, topHeight - 3);
+        ctx.fillRect(obs.x + 3, bottomY + 3, obs.width - 6, bottomHeight - 3);
+
+        // Thin highlight line
+        ctx.strokeStyle = '#00ffc8';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(obs.x, 0, obs.width, topHeight);
+        ctx.strokeRect(obs.x, bottomY, obs.width, bottomHeight);
+
+        // Numerai-style candle wick lines (thin vertical like stock wicks)
+        ctx.strokeStyle = 'rgba(0, 255, 200, 0.3)';
+        ctx.lineWidth = 1;
+        // Top wick
+        ctx.beginPath();
+        ctx.moveTo(obs.x + obs.width / 2, topHeight);
+        ctx.lineTo(obs.x + obs.width / 2, topHeight + 8);
+        ctx.stroke();
+        // Bottom wick
+        ctx.beginPath();
+        ctx.moveTo(obs.x + obs.width / 2, bottomY);
+        ctx.lineTo(obs.x + obs.width / 2, bottomY - 8);
+        ctx.stroke();
+      }
+
+      // --- Score ---
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px Courier New, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(game.score.toString(), 20, 50);
+
+      // Player — Numerai diamond
+      const px = player.x;
+      const py = player.y;
+      const pw = player.width;
+      const ph = player.height;
+      const cx = px + pw / 2;
+      const cy = py + ph / 2;
+
+      // Glow
+      ctx.shadowColor = '#ff6b6b';
+      ctx.shadowBlur = 12;
+
+      // Diamond body
+      ctx.fillStyle = '#ff6b6b';
+      ctx.beginPath();
+      ctx.moveTo(cx, py);          // top
+      ctx.lineTo(px + pw, cy);     // right
+      ctx.lineTo(cx, py + ph);     // bottom
+      ctx.lineTo(px, cy);          // left
+      ctx.closePath();
+      ctx.fill();
+
+      // Inner diamond (slightly smaller, brighter)
+      ctx.fillStyle = '#ff8e8e';
+      ctx.beginPath();
+      ctx.moveTo(cx, py + 6);
+      ctx.lineTo(px + pw - 6, cy);
+      ctx.lineTo(cx, py + ph - 6);
+      ctx.lineTo(px + 6, cy);
+      ctx.closePath();
+      ctx.fill();
+
+      // Reset shadow
+      ctx.shadowBlur = 0;
+    }
+
+    function drawGameOver() {
+      // Semi-transparent overlay
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Score panel
+      const panelW = 320;
+      const panelH = 200;
+      const panelX = (canvas.width - panelW) / 2;
+      const panelY = (canvas.height - panelH) / 2 - 30;
+
+      // Panel background
+      ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
+      ctx.strokeStyle = '#00d4aa';
+      ctx.lineWidth = 2;
+      ctx.fillRect(panelX, panelY, panelW, panelH);
+      ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+      // Game Over text
+      ctx.fillStyle = '#ff6b6b';
+      ctx.font = 'bold 36px Courier New, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', canvas.width / 2, panelY + 60);
+
+      // Score
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px Courier New, monospace';
+      ctx.fillText('Score: ' + game.score, canvas.width / 2, panelY + 110);
+
+      // Restart prompt
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = '16px Courier New, monospace';
+      ctx.fillText('Press SPACE or Tap to Restart', canvas.width / 2, panelY + 160);
+    }
+
+    // --- Game Loop ---
+    function gameLoop(timestamp) {
+      const dt = Math.min((timestamp - game.lastTime) / 16.667, 3); // cap at 3 frames
+      game.lastTime = timestamp;
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
