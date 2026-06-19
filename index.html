@@ -82,9 +82,13 @@
     // --- Obstacle asset placeholder ---
     // TODO: assign image URLs and wire into drawGame() to replace shape rendering
     const OBSTACLE_IMAGE_SRC = null;
-    // --- Player asset placeholder ---
-    // TODO: assign image URLs and wire into drawGame() to replace shape rendering
-    const PLAYER_IMAGE_SRC = null;
+    // --- Player asset ---
+    // Image is loaded below and wired into drawGame()
+    const PLAYER_IMAGE_SRC = 'assets/player.png';
+    const playerImage = new Image();
+    let playerImageLoaded = false;
+    playerImage.onload = () => { playerImageLoaded = true; };
+    playerImage.src = PLAYER_IMAGE_SRC;
     // --- Background asset placeholder ---
     // TODO: assign image URLs and wire into drawGame() to replace shape rendering
     const BACKGROUND_IMAGE_SRC = null;
@@ -286,40 +290,15 @@
       ctx.textAlign = 'left';
       ctx.fillText(game.score.toString(), 20, 50);
 
-      // Player — Numerai diamond
-      const px = player.x;
-      const py = player.y;
-      const pw = player.width;
-      const ph = player.height;
-      const cx = px + pw / 2;
-      const cy = py + ph / 2;
-
-      // Glow
-      ctx.shadowColor = '#ff6b6b';
-      ctx.shadowBlur = 12;
-
-      // Diamond body
-      ctx.fillStyle = '#ff6b6b';
-      ctx.beginPath();
-      ctx.moveTo(cx, py);          // top
-      ctx.lineTo(px + pw, cy);     // right
-      ctx.lineTo(cx, py + ph);     // bottom
-      ctx.lineTo(px, cy);          // left
-      ctx.closePath();
-      ctx.fill();
-
-      // Inner diamond (slightly smaller, brighter)
-      ctx.fillStyle = '#ff8e8e';
-      ctx.beginPath();
-      ctx.moveTo(cx, py + 6);
-      ctx.lineTo(px + pw - 6, cy);
-      ctx.lineTo(cx, py + ph - 6);
-      ctx.lineTo(px + 6, cy);
-      ctx.closePath();
-      ctx.fill();
-
-      // Reset shadow
-      ctx.shadowBlur = 0;
+      // Player — sprite image (with fallback rectangle)
+      if (playerImageLoaded) {
+        // Draw 90x90 visual centered on the 30x30 collision box (offset -30,-30)
+        ctx.drawImage(playerImage, player.x - 30, player.y - 30, 90, 90);
+      } else {
+        // Fallback: simple rectangle while image loads
+        ctx.fillStyle = '#ff6b6b';
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+      }
     }
 
     function drawGameOver() {
