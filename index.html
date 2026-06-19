@@ -70,12 +70,12 @@
     const GRAVITY = 0.5;
     const JUMP_VELOCITY = -8;
     const SPEED = 3;
-    const GAP_SIZE = 220;  // Vertical gap between top/bottom bars (220px — easier gameplay)
+    const GAP_SIZE = 270;  // Vertical gap between top/bottom bars (270px — easier gameplay)
     const SPAWN_INTERVAL_MIN = 90;
     const SPAWN_INTERVAL_MAX = 120;
     const PLAYER_X = 80;
-    const PLAYER_WIDTH = 30;
-    const PLAYER_HEIGHT = 30;
+    const PLAYER_WIDTH = 80;
+    const PLAYER_HEIGHT = 80;
 
     // --- Game state ---
     const State = { MENU: 0, PLAYING: 1, GAME_OVER: 2 };
@@ -321,8 +321,8 @@
 
       // Player — sprite image (with fallback rectangle)
       if (playerImageLoaded) {
-        // Draw 90x90 visual centered on the 30x30 collision box (offset -30,-30)
-        ctx.drawImage(playerImage, player.x - 30, player.y - 30, 90, 90);
+        // Draw 120x120 visual centered on the 80x80 collision box (offset -20,-20)
+        ctx.drawImage(playerImage, player.x - 20, player.y - 20, 120, 120);
       } else {
         // Fallback: simple rectangle while image loads
         ctx.fillStyle = '#ff6b6b';
