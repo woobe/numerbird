@@ -14,8 +14,15 @@
     }
     canvas {
       display: block;
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+      max-width: 100vw;
+      max-height: 100vh;
+      aspect-ratio: 2 / 3;
     }
   </style>
 </head>
@@ -26,18 +33,15 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    canvas.width = 400;
+    canvas.height = 600;
+    // CSS handles visual scaling via aspect-ratio & max-width/max-height
 
     // --- Constants ---
     const GRAVITY = 0.5;
     const JUMP_VELOCITY = -8;
     const SPEED = 3;
-    const GAP_SIZE = 150;
+    const GAP_SIZE = 220;  // Vertical gap between top/bottom bars (220px — easier gameplay)
     const SPAWN_INTERVAL_MIN = 90;
     const SPAWN_INTERVAL_MAX = 120;
     const PLAYER_X = 80;
