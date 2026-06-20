@@ -73,7 +73,15 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.5 — Start Screen Overhaul + Repo Rename (current)
+### v0.6 — Game Over Panel Refinement + Menu Refresh (current)
+
+- 🎯 **TIER→Score tight gap** — 10px spacing groups TIER and Score together in the Game Over panel
+- 🔲 **Heavier obstacle outlines** — candlestick black border increased 2→3px for better visibility
+- 🏆 **Menu: "Best Score" label** — ATH on menu screen renamed to "Best Score: 1 NMR ≈ $" and moved to top of screen (30px from top edge)
+- 🖼️ **New background** — `assets/background.jpg` replaced with an updated tile
+- 🏷️ Version footer bumped to v0.6
+
+### v0.5 — Start Screen Overhaul + Repo Rename
 
 - 🏙️ New seam-free background image — seamless tiling, no visible wrap seam
 - 🔧 Background tile overlap reduced from 6px → 2px (cleaner with new image)
