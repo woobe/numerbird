@@ -34,12 +34,19 @@ All gameplay constants are at the top of the `<script>` section in `index.html`:
 |----------|---------|--------|
 | `GRAVITY` | 0.5 | Falling speed (higher = faster fall) |
 | `JUMP_VELOCITY` | -8 | Jump strength (negative = upward) |
-| `SPEED` | 3 | Obstacle scroll speed |
-| `GAP_SIZE` | 270 | Vertical gap between bars (smaller = harder) |
-| `PADDING` (in `checkCollision`) | 8 | Collision fairness — higher = easier to dodge |
-| `OVERLAP` (bg tile) | 2 | Background tile overlap in pixels, seams hidden by image wrap |
+| `GAP_SIZE_INITIAL_MIN` | 250 | Starting minimum gap between bars (random range) |
+| `GAP_SIZE_INITIAL_MAX` | 270 | Starting maximum gap between bars |
+| `GAP_SIZE_FLOOR_MIN` | 220 | Hard floor: smallest minimum gap (scales down with score) |
+| `GAP_SIZE_FLOOR_MAX` | 240 | Hard floor: smallest maximum gap |
+| `GAP_SCALE_INTERVAL` | 5 | Obstacles per gap-shrink step |
+| `GAP_SCALE_STEP` | 2 | Pixels gap shrinks each interval |
+| `MIN_GAP_DISTANCE` | 100 | Minimum vertical distance between consecutive gaps |
+| `COLLISION_PADDING` (in `checkCollision`) | 8 | Collision fairness — higher = easier to dodge |
+| `TIER_INTERVAL` | 10 | Score per difficulty tier promotion |
 | `SPAWN_INTERVAL_MIN` | 90 | Minimum frames between obstacle spawns |
 | `SPAWN_INTERVAL_MAX` | 120 | Maximum frames between obstacle spawns |
+
+**Difficulty tiers:** Apprentice → Contributor → Researcher → Expert → Master → Grandmaster — each increases obstacle speed and changes player glow colour.
 
 ## Swapping Assets
 
@@ -76,6 +83,8 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 - 🏷️ "Prototype v0.5" version footer at bottom of menu (14px, 60% opacity, black outline)
 - 📝 Customization table now documents `OVERLAP` constant
 - 🔄 Repo renamed from `numerbird` → `numerocket`
+
+**Bug fix (v0.5f1):** Fixed crash on start — `const tier = getTier()` was used 53 lines before its declaration (Temporal Dead Zone), causing `ReferenceError` when entering PLAYING state. Game now renders correctly in all states.
 
 ### v0.4 — Candlestick Gradients + Easier Collision
 

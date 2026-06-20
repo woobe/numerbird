@@ -148,11 +148,37 @@
       setTimeout(() => playTone(784, 'square', 0.15, null, 0.10), 160); // G5
     }
 
+    // 🚀 Level up: rising octave sweep
+    function sfxLevelUp() {
+      initAudio();
+      playTone(440, 'triangle', 0.15, 880, 0.12);
+      setTimeout(() => playTone(880, 'triangle', 0.2, 1320, 0.10), 120);
+    }
+
     // --- Constants ---
     const GRAVITY = 0.5;
     const JUMP_VELOCITY = -8;
-    const SPEED = 3;
-    const GAP_SIZE = 270;  // Vertical gap between top/bottom bars (270px — easier gameplay)
+    const GAP_SIZE_INITIAL_MIN = 250;
+    const GAP_SIZE_INITIAL_MAX = 270;
+    const GAP_SIZE_FLOOR_MIN = 220;
+    const GAP_SIZE_FLOOR_MAX = 240;
+    const GAP_SCALE_INTERVAL = 5;   // shrink every N obstacles
+    const GAP_SCALE_STEP = 2;       // px shrink per interval
+    function getGapSize() {
+      const steps = Math.floor(game.score / GAP_SCALE_INTERVAL);
+      const min = Math.max(GAP_SIZE_FLOOR_MIN, GAP_SIZE_INITIAL_MIN - steps * GAP_SCALE_STEP);
+      const max = Math.max(GAP_SIZE_FLOOR_MAX, GAP_SIZE_INITIAL_MAX - steps * GAP_SCALE_STEP);
+      return min + Math.floor(Math.random() * (max - min + 1));
+    }  // Vertical gap scales down with score
+    const TIER_INTERVAL = 10;        // obstacles per tier
+    const TIER_NAMES = ['Apprentice', 'Contributor', 'Researcher', 'Expert', 'Master', 'Grandmaster'];
+    const TIER_COLORS = ['#737373', '#4DB8FF', '#00E5FF', '#44E76B', '#B388FF', '#FFE100'];
+    const TIER_SPEEDS = [3.6, 3.8, 4.0, 4.2, 4.4, 4.6];
+    function getTier() {
+      const index = Math.min(TIER_NAMES.length - 1, Math.floor(game.score / TIER_INTERVAL));
+      return { index, name: TIER_NAMES[index], color: TIER_COLORS[index], speed: TIER_SPEEDS[index] };
+    }
+    function getSpeed() { return getTier().speed; }
     const SPAWN_INTERVAL_MIN = 90;
     const SPAWN_INTERVAL_MAX = 120;
     const PLAYER_X = 80;
@@ -165,6 +191,7 @@
     const game = {
       state: State.MENU,
       score: 0,
+      comboCount: 0,
       obstacles: [],
       spawnTimer: 0,
       spawnInterval: SPAWN_INTERVAL_MIN,
@@ -175,6 +202,8 @@
       ripples: [],
       bgOffset: 0,
       particles: [],
+      rings: [],
+      screenFlash: 0,
     };
 
     // --- Player ---
@@ -191,16 +220,20 @@
       player.y = LOGICAL_HEIGHT / 2;
       player.velocityY = 0;
       game.score = 0;
+      game.comboCount = 0;
       game.obstacles = [];
       game.spawnTimer = 0;
       game.spawnInterval = SPAWN_INTERVAL_MIN;
-      game.deathTimer = 0;
-      game.bgOffset = 0;
       game.particles = [];
       game.scorePopTimer = 0;
+      game.deathTimer = 0;
+      game.bgOffset = 0;
       game.rainbowHue = 0;
       game.ripples = [];
+      game.rings = [];
+      game.screenFlash = 0;
       game.streaks = [];
+      game.lastGapY = null;
       player.tiltAngle = 0;
     }
     resetGame();
@@ -271,13 +304,30 @@
 
     function spawnObstacle() {
       const MIN_BAR_HEIGHT = Math.round(LOGICAL_HEIGHT * 0.13); // 80px min — keeps HUD area clear
-      const minGapY = MIN_BAR_HEIGHT + GAP_SIZE / 2;
-      const maxGapY = LOGICAL_HEIGHT - MIN_BAR_HEIGHT - GAP_SIZE / 2;
-      const gapY = minGapY + Math.random() * (maxGapY - minGapY);
+      const gapSize = getGapSize();
+      const minGapY = MIN_BAR_HEIGHT + gapSize / 2;
+      const maxGapY = LOGICAL_HEIGHT - MIN_BAR_HEIGHT - gapSize / 2;
+      const MIN_GAP_DISTANCE = 100; // minimum vertical distance between consecutive gaps
+      let gapY = minGapY + Math.random() * (maxGapY - minGapY);
+      // Enforce minimum vertical distance from previous gap
+      if (game.lastGapY !== null) {
+        const tooClose = Math.abs(gapY - game.lastGapY) < MIN_GAP_DISTANCE;
+        if (tooClose) {
+          // Push gapY away from lastGapY by exactly MIN_GAP_DISTANCE
+          if (gapY < game.lastGapY) {
+            gapY = game.lastGapY - MIN_GAP_DISTANCE;
+          } else {
+            gapY = game.lastGapY + MIN_GAP_DISTANCE;
+          }
+          // Clamp to valid range
+          gapY = Math.max(minGapY, Math.min(maxGapY, gapY));
+        }
+      }
+      game.lastGapY = gapY;
       game.obstacles.push({
         x: LOGICAL_WIDTH,
         gapY: gapY,
-        gapSize: GAP_SIZE,
+        gapSize: gapSize,
         width: 60,
         scored: false,
       });
@@ -301,7 +351,7 @@
         }
 
         // Parallax background scroll (30% of obstacle speed)
-        game.bgOffset += SPEED * 0.3 * dt;
+        game.bgOffset += getSpeed() * 0.3 * dt;
 
         // Spawn obstacles (dt-accumulated timer)
         game.spawnTimer += dt;
@@ -315,14 +365,29 @@
         // Move obstacles
         for (let i = game.obstacles.length - 1; i >= 0; i--) {
           const obs = game.obstacles[i];
-          obs.x -= SPEED * dt;
+          obs.x -= getSpeed() * dt;
 
           // Scoring
           if (!obs.scored && obs.x + obs.width < player.x) {
             obs.scored = true;
             game.score++;
+            game.comboCount++;
             game.scorePopTimer = 500;
-            game.rainbowHue = Math.random() * 360;
+            if (game.score % TIER_INTERVAL === 0) {
+              // Tier promotion — shockwave ring + screen flash + fanfare
+              game.rings.push({
+                x: player.x + PLAYER_WIDTH / 2,
+                y: player.y + PLAYER_HEIGHT / 2,
+                radius: 0,
+                maxRadius: 150,
+                timer: 30,
+                duration: 30,
+              });
+              game.screenFlash = 8;
+              sfxLevelUp();
+              game.comboCount = 0;
+            }
+            // Regular score sound
             sfxDing();
           }
 
@@ -342,15 +407,21 @@
         }
 
         // --- Exhaust smoke particles ---
-        // Spawn 2 particles per frame behind the rocket nozzle
-        for (let i = 0; i < 2; i++) {
+        // Spawn particles behind the rocket nozzle (more during boost)
+        const particleTier = Math.floor(game.score / TIER_INTERVAL);
+        const spawnCount = Math.min(2 + Math.floor(particleTier / 2), 4);
+        const minSize = 5;
+        const maxSize = 8;
+        const warmth = Math.min(1, particleTier / 6);
+        for (let i = 0; i < spawnCount; i++) {
           game.particles.push({
             x: player.x - 1 + Math.random() * 8,
             y: player.y + 71 + Math.random() * 10,
             life: 1.0,
-            size: 5 + Math.random() * 3,
-            vx: -(1.5 + Math.random() * 1.5),
-            vy: -(0.5 + Math.random() * 0.5) + Math.random() * 1.0,
+            size: minSize + Math.random() * (maxSize - minSize),
+            vx: -(4 + Math.random() * 4),
+            vy: 1.5 + Math.random() * 2.5,
+            warmth: warmth,
           });
         }
         // Cap at 200 particles
@@ -362,6 +433,8 @@
           const p = game.particles[i];
           p.x += p.vx * dt;
           p.y += p.vy * dt;
+          // Upward buoyancy: hot gas rises — stronger as smoke ages
+          p.vy -= 0.02 * dt;
           // Turbulence jitter
           p.vx += (Math.random() - 0.5) * 0.2;
           p.vy += (Math.random() - 0.5) * 0.2;
@@ -390,6 +463,22 @@
       if (game.scorePopTimer > 0) {
         game.scorePopTimer -= dt * 16.667;
         if (game.scorePopTimer < 0) game.scorePopTimer = 0;
+      }
+
+      // Update shockwave rings
+      for (let i = game.rings.length - 1; i >= 0; i--) {
+        const r = game.rings[i];
+        r.timer -= dt * 16.667;
+        r.radius = r.maxRadius * (1 - r.timer / r.duration);
+        if (r.timer <= 0) {
+          game.rings.splice(i, 1);
+        }
+      }
+
+      // Screen flash fade
+      if (game.screenFlash > 0) {
+        game.screenFlash -= dt * 16.667;
+        if (game.screenFlash < 0) game.screenFlash = 0;
       }
     }
 
@@ -428,6 +517,12 @@
       // End shake transform
       if (shaking) {
         ctx.restore();
+      }
+
+      // Screen flash (brief tint on level up)
+      if (game.screenFlash > 0) {
+        ctx.fillStyle = `rgba(255, 200, 100, ${0.12 * (game.screenFlash / 8)})`;
+        ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
       }
 
       // CRT scanline overlay (always on top, unaffected by shake)
@@ -543,6 +638,16 @@
         ctx.stroke();
       }
 
+      // --- Shockwave rings (difficulty tier up) ---
+      for (const r of game.rings) {
+        const progress = r.timer / r.duration;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 200, 100, ${1.0 * (1 - progress)})`;
+        ctx.lineWidth = 8 - 5 * progress;
+        ctx.stroke();
+      }
+
       // (Score drawn in HUD strip below)
 
       // --- Exhaust smoke particles (radial-gradient, behind player) ---
@@ -551,23 +656,25 @@
         let r, g, b, alpha, drawR;
         if (p.life > 0.85) {
           // life 1.0→0.85: lighter warm orange core (#FF8800), alpha 0.95
-          r = 255; g = 136; b = 0;
-          alpha = 0.95;
-          drawR = p.size;
+          r = 255; g = Math.round(136 + 84 * p.warmth); b = 0;
+          alpha = 0.95 + 0.05 * p.warmth;
+          drawR = p.size * (1.0 + 0.3 * p.warmth);
         } else if (p.life > 0.75) {
           // life 0.85→0.75: transition to deep warm orange (#FF5500), alpha 0.9
           const t = 1 - (p.life - 0.75) / 0.10;
           g = Math.round(136 + (85 - 136) * t);
+          g = Math.round(g + (Math.min(255, Math.round(g * 1.6)) - g) * p.warmth);
           r = 255; b = 0;
-          alpha = 0.9;
-          drawR = p.size;
+          alpha = 0.9 + 0.1 * p.warmth;
+          drawR = p.size * (1.0 + 0.3 * p.warmth);
         } else if (p.life > 0.5) {
           // life 0.75→0.5: dark gray smoke (#222→#444), medium, alpha 0.6
           const t = 1 - (p.life - 0.5) / 0.25;
-          const gray = Math.round(0x22 + (0x44 - 0x22) * t);
+          let gray = Math.round(0x22 + (0x44 - 0x22) * t);
+          gray = Math.round(gray + (gray * 1.5 - gray) * p.warmth);
           r = gray; g = gray; b = gray;
-          alpha = 0.6;
-          drawR = p.size;
+          alpha = 0.6 + 0.2 * p.warmth;
+          drawR = p.size * (1.0 + 0.2 * p.warmth);
         } else if (p.life > 0.2) {
           // life 0.5→0.2: light gray smoke (#777→#aaa), large, alpha 0.3
           const t = 1 - (p.life - 0.2) / 0.3;
@@ -593,13 +700,43 @@
       }
       ctx.globalAlpha = 1.0;
 
-      // Player — sprite image with smoothed velocity-based tilt (with fallback rectangle)
+      // Get current tier info (used for glow colour & progress bar)
+      const tier = getTier();
+
+      // Player — rocket glow + drop shadow for visibility on dark backgrounds
       const tiltAngle = player.tiltAngle;
       if (playerImageLoaded) {
-        ctx.save();
-        // Rotate around visual center (120x120 sprite centered on 100x100 collision)
         const cx = player.x + 50;
         const cy = player.y + 50;
+        // — Rocket glow (warm orange halo at nozzle, illuminates from below)
+        const glowX = player.x + 3;
+        const glowY = player.y + 76;
+        const glowGrad = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, 60);
+        glowGrad.addColorStop(0, 'rgba(255, 136, 0, 0.30)');
+        glowGrad.addColorStop(0.4, 'rgba(255, 80, 0, 0.12)');
+        glowGrad.addColorStop(1, 'rgba(255, 80, 0, 0)');
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(glowX, glowY, 60, 0, Math.PI * 2);
+        ctx.fill();
+        // — Drop shadow (faint dark silhouette behind player)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(tiltAngle);
+        ctx.globalAlpha = 0.18;
+        ctx.drawImage(playerImage, -58, -58, 120, 120);
+        ctx.restore();
+        // — Player outline (tier-coloured glow)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(tiltAngle);
+        ctx.shadowColor = tier.color;
+        ctx.shadowBlur = 4;
+        ctx.drawImage(playerImage, -60, -60, 120, 120);
+        ctx.restore();
+        // — Main player sprite (on top, no glow)
+        ctx.save();
+        // Rotate around visual center (120x120 sprite centered on 100x100 collision)
         ctx.translate(cx, cy);
         ctx.rotate(tiltAngle);
         ctx.drawImage(playerImage, -60, -60, 120, 120);
@@ -639,9 +776,23 @@
         ctx.fillText(scoreText, 20, 50);
         ctx.restore();
       } else {
+        ctx.save();
         ctx.strokeText(scoreText, 20, 50);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(scoreText, 20, 50);
+        ctx.restore();
+      }
+      // --- Tier progress bar (10 blocks = one promotion) ---
+      const barX = 20;
+      const barY = 65;
+      const segW = 22;
+      const segH = 6;
+      const segGap = 2;
+      for (let i = 0; i < TIER_INTERVAL; i++) {
+        const segX = barX + i * (segW + segGap);
+        const filled = i < (game.score % TIER_INTERVAL);
+        ctx.fillStyle = filled ? tier.color : 'rgba(255, 255, 255, 0.12)';
+        ctx.fillRect(segX, barY, segW, segH);
       }
     }
 
