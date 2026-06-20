@@ -37,6 +37,7 @@ All gameplay constants are at the top of the `<script>` section in `index.html`:
 | `SPEED` | 3 | Obstacle scroll speed |
 | `GAP_SIZE` | 270 | Vertical gap between bars (smaller = harder) |
 | `PADDING` (in `checkCollision`) | 8 | Collision fairness — higher = easier to dodge |
+| `OVERLAP` (bg tile) | 2 | Background tile overlap in pixels, seams hidden by image wrap |
 | `SPAWN_INTERVAL_MIN` | 90 | Minimum frames between obstacle spawns |
 | `SPAWN_INTERVAL_MAX` | 120 | Maximum frames between obstacle spawns |
 
@@ -57,7 +58,7 @@ const OBSTACLE_IMAGE_SRC = null;                     // set to replace candlesti
 
 ```bash
 git add .
-git commit -m "v0.4"
+git commit -m "v0.5"
 git push origin main
 ```
 
@@ -65,7 +66,14 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.4 — Candlestick Gradients + Easier Collision (current)
+### v0.5 — Seamless Background + Rocket Favicon (current)
+
+- 🏙️ New seam-free background image — seamless tiling, no visible wrap seam
+- 🔧 Background tile overlap reduced from 6px → 2px (cleaner with new image)
+- 🚀 Browser tab icon changed to rocket emoji (inline SVG favicon)
+- 📝 Customization table now documents `OVERLAP` constant
+
+### v0.4 — Candlestick Gradients + Easier Collision
 
 - 🟢 Green candlestick gradient: two-tone vertical gradient (`#00e676` → `#009624`)
 - 🔄 Mirrored gradient — top bars light near gap, bottom bars light near gap
