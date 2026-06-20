@@ -22,7 +22,7 @@ Open `index.html` in any modern browser.
 - **Background:** Parallax-scrolling Tokyo cityscape at night with stock chart overlay (`background.jpg`, 1200×600)
 - **Obstacles:** Candlestick-chart bars with two-tone green gradient (`#00e676` → `#009624`), mirrored direction so light side faces the gap, black border + wicks
 - **Player:** Pixel-art alligator in hoodie with rocket launcher (`player.png`, 120×120 visual, 80×80 collision hitbox)
-- **Effects:** Sci-fi exhaust smoke trail (radial-gradient particles), CRT scanline overlay, gentle screen shake on death
+- **Effects:** Sci-fi exhaust smoke trail (radial-gradient particles), tier-coloured player glow disc, dual shockwave rings on level-up, Web Audio chiptune SFX, CRT scanline overlay, gentle screen shake on death
 - **Typography:** Courier New monospace — terminal/data-science aesthetic
 - **Display:** Auto-resizing canvas fills viewport height at 2:3 ratio, DPR-aware for Retina sharpness
 
@@ -73,13 +73,18 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.6 — Game Over Panel Refinement + Menu Refresh (current)
+### v0.6 — Game Over Panel Refinement + Menu Refresh + Visual Overhaul (current)
 
 - 🎯 **TIER→Score tight gap** — 10px spacing groups TIER and Score together in the Game Over panel
 - 🔲 **Heavier obstacle outlines** — candlestick black border increased 2→3px for better visibility
 - 🏆 **Menu: "Best Score" label** — ATH on menu screen renamed to "Best Score: 1 NMR ≈ $" and moved to top of screen (30px from top edge)
 - 🖼️ **New background** — `assets/background.jpg` replaced with an updated tile
 - 🏷️ Version footer bumped to v0.6
+- 🟣 **Tier-coloured player glow disc** — radial gradient behind player sprite (24% steady, 60% on level-up), guaranteed visible on all devices
+- 🔵 **Dual shockwave rings** — two concentric tier-coloured rings on level-up (main 220px, secondary 180px staggered), sweep over 35 frames with configurable per-ring alpha/width
+- 🟠 **Screen flash fix** — warm orange tint now lasts 8 frames (~133ms) instead of <1 frame (unit mismatch bug)
+- 🐛 **Ring timing fix** — shockwave rings now last 35 frames (~583ms) instead of 2 frames due to `dt * 16.667` unit mismatch; same bug fixed for screen flash
+- 🎵 **Web Audio chiptune SFX** — jump (boing), score (triple blip), death (sad trombone), start arpeggio, level-up sweep
 
 ### v0.5 — Start Screen Overhaul + Repo Rename
 
