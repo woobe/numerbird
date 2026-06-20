@@ -91,6 +91,7 @@
       lastTime: 0,
       deathTimer: 0,
       bgOffset: 0,
+      particles: [],
     };
 
     // --- Player ---
@@ -111,6 +112,7 @@
       game.spawnInterval = SPAWN_INTERVAL_MIN;
       game.deathTimer = 0;
       game.bgOffset = 0;
+      game.particles = [];
     }
     resetGame();
 
@@ -242,6 +244,41 @@
             game.obstacles.splice(i, 1);
           }
         }
+
+        // --- Exhaust smoke particles ---
+        // Spawn 2 particles per frame behind the rocket nozzle
+        for (let i = 0; i < 2; i++) {
+          game.particles.push({
+            x: player.x - 12 + Math.random() * 6,
+            y: player.y + 68 + Math.random() * 8,
+            life: 1.0,
+            size: 4 + Math.random() * 1,
+            vx: -(1.5 + Math.random() * 1.5),
+            vy: -(0.5 + Math.random() * 0.5) + Math.random() * 1.0,
+          });
+        }
+        // Cap at 200 particles
+        if (game.particles.length > 200) {
+          game.particles.splice(0, game.particles.length - 200);
+        }
+        // Update existing particles
+        for (let i = game.particles.length - 1; i >= 0; i--) {
+          const p = game.particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          // Turbulence jitter
+          p.vx += (Math.random() - 0.5) * 0.2;
+          p.vy += (Math.random() - 0.5) * 0.2;
+          p.life -= 0.02 * dt;
+          // Size expands as smoke ages and spreads
+          if (p.life < 0.75) p.size += 0.03 * dt;
+          if (p.life < 0.5)  p.size += 0.04 * dt;
+          if (p.life < 0.2)  p.size += 0.05 * dt;
+          if (p.size > 16)   p.size = 16;
+          if (p.life <= 0) {
+            game.particles.splice(i, 1);
+          }
+        }
       }
 
       // Track death timer for shake/flash effect
@@ -362,6 +399,54 @@
       ctx.font = 'bold 32px Courier New, monospace';
       ctx.textAlign = 'left';
       ctx.fillText('1 NMR ≈ $' + game.score, 20, 50);
+
+      // --- Exhaust smoke particles (radial-gradient, behind player) ---
+      for (const p of game.particles) {
+        // Colour/lifecycle curve: muzzle flash fire blast → dark gray → light gray → transparent
+        let r, g, b, alpha, drawR;
+        if (p.life > 0.85) {
+          // life 1.0→0.85: lighter warm orange core (#FF8800), alpha 0.95
+          r = 255; g = 136; b = 0;
+          alpha = 0.95;
+          drawR = p.size;
+        } else if (p.life > 0.75) {
+          // life 0.85→0.75: transition to deep warm orange (#FF5500), alpha 0.9
+          const t = 1 - (p.life - 0.75) / 0.10;
+          g = Math.round(136 + (85 - 136) * t);
+          r = 255; b = 0;
+          alpha = 0.9;
+          drawR = p.size;
+        } else if (p.life > 0.5) {
+          // life 0.75→0.5: dark gray smoke (#222→#444), medium, alpha 0.6
+          const t = 1 - (p.life - 0.5) / 0.25;
+          const gray = Math.round(0x22 + (0x44 - 0x22) * t);
+          r = gray; g = gray; b = gray;
+          alpha = 0.6;
+          drawR = p.size;
+        } else if (p.life > 0.2) {
+          // life 0.5→0.2: light gray smoke (#777→#aaa), large, alpha 0.3
+          const t = 1 - (p.life - 0.2) / 0.3;
+          const gray = Math.round(0x77 + (0xaa - 0x77) * t);
+          r = gray; g = gray; b = gray;
+          alpha = 0.3;
+          drawR = p.size;
+        } else {
+          // life 0.2→0.0: fading to transparent, extra large
+          r = 170; g = 170; b = 170;
+          alpha = (p.life / 0.2) * 0.3;
+          drawR = p.size;
+        }
+
+        ctx.globalAlpha = Math.min(alpha, 1);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, drawR);
+        grad.addColorStop(0, `rgb(${r},${g},${b})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, drawR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
 
       // Player — sprite image (with fallback rectangle)
       if (playerImageLoaded) {

@@ -64,7 +64,16 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.2 — Parallax + Retro Feel + Polished UX (current)
+### v0.3 — Sci-fi Exhaust Smoke Trail (current)
+
+- ✨ Radial-gradient particle system replaces grey squares
+- 🔥 Colour curve matched to sprite muzzle flash: `#FF8800` → `#FF5500` → dark/light gray → transparent
+- 💨 Size grows 4-5px → 16px with staged expansion
+- 🌪️ Turbulence jitter for natural billowing
+- 🎯 Spawn position centred on rocket nozzle muzzle flash
+- ⚡ 200 particle cap, ~100 steady-state
+
+### v0.2 — Parallax + Retro Feel + Polished UX
 
 - ✨ Parallax background (Tokyo cityscape at night with stock chart overlay)
 - 🎨 Pixel-art alligator with rocket launcher (120×120 visual, 80×80 collision)
