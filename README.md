@@ -1,4 +1,4 @@
-# Numerbird 🐊📈
+# Numerocket 🚀📈
 
 A 2D Flappy Bird clone with a **Numerai data-science tournament theme**. Built with vanilla HTML5, CSS, and the Canvas API — zero dependencies, deployable anywhere.
 
@@ -62,18 +62,20 @@ git commit -m "v0.5"
 git push origin main
 ```
 
-Then in your repo **Settings → Pages → Build and deployment → Source: Deploy from a branch → main, /root** and save. Your site will be live at `https://<username>.github.io/numerbird/`.
+Then in your repo **Settings → Pages → Build and deployment → Source: Deploy from a branch → main, /root** and save. Your site will be live at `https://<username>.github.io/numerocket/`.
 
 ## Changelog
 
-### v0.5 — Start Screen Polish + Rocket Favicon (current)
+### v0.5 — Start Screen Overhaul + Repo Rename (current)
 
 - 🏙️ New seam-free background image — seamless tiling, no visible wrap seam
 - 🔧 Background tile overlap reduced from 6px → 2px (cleaner with new image)
 - 🚀 Browser tab icon changed to rocket emoji (inline SVG favicon)
 - 🐊 Player alligator sprite displayed on start screen above title
-- 🏷️ "Prototype v0.5" version footer at bottom of menu
+- 🎬 Subtitle: "Ride the market and send NMR to the moon" (18px, white + black outline)
+- 🏷️ "Prototype v0.5" version footer at bottom of menu (14px, 60% opacity, black outline)
 - 📝 Customization table now documents `OVERLAP` constant
+- 🔄 Repo renamed from `numerbird` → `numerocket`
 
 ### v0.4 — Candlestick Gradients + Easier Collision
 

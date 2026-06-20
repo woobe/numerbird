@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Numerbird</title>
+  <title>Numerocket</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -459,13 +459,23 @@
         ctx.fillText('ATH: 1 NMR ≈ $' + bestScore, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 80);
       }
       ctx.font = 'bold 48px Courier New, monospace';
-      ctx.strokeText('NUMERBIRD', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 30);
+      ctx.strokeText('NUMEROCKET', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 30);
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('NUMERBIRD', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 30);
+      ctx.fillText('NUMEROCKET', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 30);
+      // Subtitle — two rows, 18px white + black outline (same as prompt)
       ctx.font = '18px Courier New, monospace';
-      ctx.strokeText('Press SPACE or Tap to Start', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 30);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeText('  Ride the market and  ', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 2);
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('Press SPACE or Tap to Start', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 30);
+      ctx.fillText('  Ride the market and  ', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 2);
+      ctx.strokeText('  send NMR to the moon  ', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 20);
+      ctx.fillText('  send NMR to the moon  ', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 20);
+      ctx.font = '18px Courier New, monospace';
+      ctx.lineWidth = 3;
+      ctx.strokeText('Press SPACE or Tap to Start', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 240);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('Press SPACE or Tap to Start', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 240);
       // Version footer
       ctx.font = '14px Courier New, monospace';
       ctx.textAlign = 'center';
