@@ -22,11 +22,18 @@
       right: 0;
       margin: auto;
       image-rendering: pixelated;
+      touch-action: manipulation;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas" role="img" aria-label="Numerocket game — navigate an alligator rocket through stock-chart obstacles. Press Space or tap to jump.">
+    <p>Numerocket — a Flappy Bird-style game with a Numerai data-science theme. Requires JavaScript and a modern browser.</p>
+  </canvas>
+  <div id="rotate-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,14,23,0.85);z-index:10;pointer-events:none;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="font-size:48px;margin-bottom:16px;text-align:center;">↻</div>
+    <div style="font-family:'Courier New',monospace;color:#ffffff;font-size:20px;text-align:center;">Please rotate your device</div>
+  </div>
   <script>
     // --- Canvas setup ---
     const canvas = document.getElementById('gameCanvas');
@@ -65,8 +72,12 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    // Resize on load and on window change
-    window.addEventListener('resize', resizeCanvas);
+    // Resize on load and on window change (debounced)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resizeCanvas, 100);
+    });
     resizeCanvas();
 
     // --- Sound Effects (Web Audio API chiptune) ---
@@ -190,7 +201,9 @@
         speed: Math.min(baseSpeed, 7.0),
       };
     }
-    function getSpeed() { return getTier().speed; }
+    function getSpeed(tier) { if (!tier) tier = getTier(); return tier.speed; }
+    const DT_TO_MS = 16.667;
+    const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const SPAWN_INTERVAL_MIN = 90;
     const SPAWN_INTERVAL_MAX = 120;
     const PLAYER_X = 80;
@@ -353,6 +366,10 @@
     // --- Update ---
     function update(dt) {
       if (game.state === State.PLAYING) {
+        // Cache tier once per frame
+        const currentTier = getTier();
+        const currentSpeed = currentTier.speed;
+
         // Player physics
         player.velocityY += GRAVITY * dt;
         player.y += player.velocityY * dt;
@@ -367,8 +384,8 @@
           game.state = State.GAME_OVER;
         }
 
-        // Parallax background scroll (30% of obstacle speed)
-        game.bgOffset += getSpeed() * 0.3 * dt;
+        // Parallax background scroll (30% of obstacle speed), wrap to keep bounded
+        game.bgOffset = (game.bgOffset + currentSpeed * 0.3 * dt) % (bgNaturalW || 1200);
 
         // Spawn obstacles (dt-accumulated timer)
         game.spawnTimer += dt;
@@ -382,7 +399,7 @@
         // Move obstacles
         for (let i = game.obstacles.length - 1; i >= 0; i--) {
           const obs = game.obstacles[i];
-          obs.x -= getSpeed() * dt;
+          obs.x -= currentSpeed * dt;
 
           // Scoring
           if (!obs.scored && obs.x + obs.width < player.x) {
@@ -448,7 +465,8 @@
         // --- Exhaust smoke particles ---
         // Spawn particles behind the rocket nozzle (more during boost)
         const particleTier = Math.floor(game.score / TIER_INTERVAL);
-        const spawnCount = Math.min(2 + Math.floor(particleTier / 2), 4);
+        let spawnCount = Math.min(2 + Math.floor(particleTier / 2), 4);
+        if (REDUCED_MOTION) spawnCount = Math.min(1, spawnCount);
         const minSize = 5;
         const maxSize = 8;
         const warmth = Math.min(1, particleTier / 6);
@@ -463,9 +481,10 @@
             warmth: warmth,
           });
         }
-        // Cap at 200 particles
-        if (game.particles.length > 200) {
-          game.particles.splice(0, game.particles.length - 200);
+        // Cap at 200 particles (50 with reduced motion)
+        const maxParticles = REDUCED_MOTION ? 50 : 200;
+        if (game.particles.length > maxParticles) {
+          game.particles.splice(0, game.particles.length - maxParticles);
         }
         // Update existing particles
         for (let i = game.particles.length - 1; i >= 0; i--) {
@@ -495,12 +514,12 @@
 
       // Track death timer for shake/flash effect
       if (game.state === State.GAME_OVER) {
-        game.deathTimer += dt * 16.667;
+        game.deathTimer += dt * DT_TO_MS;
       }
 
       // Decrement score pop timer
       if (game.scorePopTimer > 0) {
-        game.scorePopTimer -= dt * 16.667;
+        game.scorePopTimer -= dt * DT_TO_MS;
         if (game.scorePopTimer < 0) game.scorePopTimer = 0;
       }
 
@@ -533,7 +552,7 @@
     // --- Draw ---
     function draw() {
       // Shake effect on death (±1.5px for 200ms — gentle arcade feedback)
-      const shaking = game.deathTimer > 0 && game.deathTimer < 200;
+      const shaking = !REDUCED_MOTION && game.deathTimer > 0 && game.deathTimer < 200;
       if (shaking) {
         ctx.save();
         ctx.translate((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
@@ -573,10 +592,12 @@
         ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
       }
 
-      // CRT scanline overlay (always on top, unaffected by shake)
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-      for (let y = 0; y < LOGICAL_HEIGHT; y += 4) {
-        ctx.fillRect(0, y, LOGICAL_WIDTH, 2);
+      if (!REDUCED_MOTION) {
+        // CRT scanline overlay (always on top, unaffected by shake)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        for (let y = 0; y < LOGICAL_HEIGHT; y += 4) {
+          ctx.fillRect(0, y, LOGICAL_WIDTH, 2);
+        }
       }
     }
 
@@ -934,7 +955,7 @@
 
     // --- Game Loop ---
     function gameLoop(timestamp) {
-      const dt = Math.min((timestamp - game.lastTime) / 16.667, 3); // cap at 3 frames
+      const dt = Math.min((timestamp - game.lastTime) / DT_TO_MS, 3); // cap at 3 frames
       game.lastTime = timestamp;
 
       update(dt);
@@ -943,6 +964,15 @@
       requestAnimationFrame(gameLoop);
     }
     requestAnimationFrame(gameLoop);
+
+    // --- Landscape orientation overlay for small screens ---
+    const rotateOverlay = document.getElementById('rotate-overlay');
+    const orientationMql = window.matchMedia('(orientation: landscape)');
+    function checkOrientation() {
+      rotateOverlay.style.display = (orientationMql.matches && window.innerWidth < 768) ? 'flex' : 'none';
+    }
+    checkOrientation();
+    orientationMql.addEventListener('change', checkOrientation);
   </script>
 </body>
 </html>
