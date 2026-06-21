@@ -1,0 +1,27 @@
+{
+  "name": "Numerocket",
+  "short_name": "Numerocket",
+  "description": "A Flappy Bird-style game with a Numerai data-science theme — navigate an alligator rocket through stock-chart obstacles.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' width='192' height='192'><rect width='192' height='192' fill='%230a0e17' rx='32'/><text x='96' y='140' font-size='140' text-anchor='middle' fill='white'>🚀</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'><rect width='512' height='512' fill='%230a0e17' rx='64'/><text x='256' y='370' font-size='350' text-anchor='middle' fill='white'>🚀</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

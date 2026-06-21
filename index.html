@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Numerocket</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -48,6 +51,8 @@
     canvas.height = LOGICAL_HEIGHT;
 
     // Auto-resize: fill viewport height, maintain 2:3, DPR-aware
+    const MIN_WIDTH = 200;
+    const MIN_HEIGHT = 300;
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
 
@@ -60,6 +65,10 @@
         displayWidth = window.innerWidth;
         displayHeight = Math.round(displayWidth * 3 / 2);
       }
+
+      // Enforce minimum canvas size guard
+      displayWidth = Math.max(MIN_WIDTH, displayWidth);
+      displayHeight = Math.max(MIN_HEIGHT, displayHeight);
 
       canvas.style.width = displayWidth + 'px';
       canvas.style.height = displayHeight + 'px';
@@ -209,6 +218,50 @@
     const PLAYER_X = 80;
     const PLAYER_WIDTH = 100;
     const PLAYER_HEIGHT = 100;
+
+    // --- Particle gradient cache (pre-rendered at setup to avoid per-frame gradient creation) ---
+    const PARTICLE_CACHE_RADIUS = 16;
+    const particleGradientCache = (function buildParticleGradientCache() {
+      const stages = [
+        { r: 255, g: 212, b: 68 },   // life > 0.85: warm orange-yellow core
+        { r: 255, g: 136, b: 0 },    // life > 0.75: deep orange
+        { r: 51, g: 51, b: 51 },     // life > 0.5: dark gray smoke
+        { r: 153, g: 153, b: 153 },  // life > 0.2: light gray smoke
+        { r: 170, g: 170, b: 170 },  // life <= 0.2: fading gray
+      ];
+      return stages.map(function(c) {
+        var canvas = document.createElement('canvas');
+        var size = PARTICLE_CACHE_RADIUS * 2;
+        canvas.width = size;
+        canvas.height = size;
+        var cx = canvas.getContext('2d');
+        var grad = cx.createRadialGradient(
+          PARTICLE_CACHE_RADIUS, PARTICLE_CACHE_RADIUS, 0,
+          PARTICLE_CACHE_RADIUS, PARTICLE_CACHE_RADIUS, PARTICLE_CACHE_RADIUS
+        );
+        grad.addColorStop(0, 'rgb(' + c.r + ',' + c.g + ',' + c.b + ')');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        cx.fillStyle = grad;
+        cx.fillRect(0, 0, size, size);
+        return canvas;
+      });
+    })();
+
+    // --- Pre-rendered CRT scanline overlay (single drawImage instead of 150 fillRect calls) ---
+    const scanlineCanvas = (function buildScanlineCanvas() {
+      var canvas = document.createElement('canvas');
+      canvas.width = LOGICAL_WIDTH;
+      canvas.height = LOGICAL_HEIGHT;
+      var slCtx = canvas.getContext('2d');
+      slCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      for (var y = 0; y < LOGICAL_HEIGHT; y += 4) {
+        slCtx.fillRect(0, y, LOGICAL_WIDTH, 2);
+      }
+      return canvas;
+    })();
+
+    // --- Tier symbols for colour-blind accessibility ---
+    const TIER_SYMBOLS = ['\u25CF', '\u25A0', '\u25B2', '\u2605', '\u25C6', '\u2606'];
 
     // --- Game state ---
     const State = { MENU: 0, PLAYING: 1, GAME_OVER: 2 };
@@ -593,11 +646,8 @@
       }
 
       if (!REDUCED_MOTION) {
-        // CRT scanline overlay (always on top, unaffected by shake)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        for (let y = 0; y < LOGICAL_HEIGHT; y += 4) {
-          ctx.fillRect(0, y, LOGICAL_WIDTH, 2);
-        }
+        // CRT scanline overlay (pre-rendered offscreen canvas, single drawImage)
+        ctx.drawImage(scanlineCanvas, 0, 0);
       }
     }
 
@@ -645,9 +695,9 @@
       ctx.textAlign = 'center';
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#000000';
-      ctx.strokeText('Prototype v0.6', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
+      ctx.strokeText('Prototype v0.6.1', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.60)';
-      ctx.fillText('Prototype v0.6', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
+      ctx.fillText('Prototype v0.6.1', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
     }
 
     function drawGame() {
@@ -723,51 +773,32 @@
 
       // --- Exhaust smoke particles (radial-gradient, behind player) ---
       for (const p of game.particles) {
-        // Colour/lifecycle curve: muzzle flash fire blast → dark gray → light gray → transparent
-        let r, g, b, alpha, drawR;
+        // Colour/lifecycle curve determines stage index into cached gradient palette
+        let alpha, drawR, stageIdx;
         if (p.life > 0.85) {
-          // life 1.0→0.85: lighter warm orange core (#FF8800), alpha 0.95
-          r = 255; g = Math.round(136 + 84 * p.warmth); b = 0;
           alpha = 0.95 + 0.05 * p.warmth;
           drawR = p.size * (1.0 + 0.3 * p.warmth);
+          stageIdx = 0;
         } else if (p.life > 0.75) {
-          // life 0.85→0.75: transition to deep warm orange (#FF5500), alpha 0.9
-          const t = 1 - (p.life - 0.75) / 0.10;
-          g = Math.round(136 + (85 - 136) * t);
-          g = Math.round(g + (Math.min(255, Math.round(g * 1.6)) - g) * p.warmth);
-          r = 255; b = 0;
           alpha = 0.9 + 0.1 * p.warmth;
           drawR = p.size * (1.0 + 0.3 * p.warmth);
+          stageIdx = 1;
         } else if (p.life > 0.5) {
-          // life 0.75→0.5: dark gray smoke (#222→#444), medium, alpha 0.6
-          const t = 1 - (p.life - 0.5) / 0.25;
-          let gray = Math.round(0x22 + (0x44 - 0x22) * t);
-          gray = Math.round(gray + (gray * 1.5 - gray) * p.warmth);
-          r = gray; g = gray; b = gray;
           alpha = 0.6 + 0.2 * p.warmth;
           drawR = p.size * (1.0 + 0.2 * p.warmth);
+          stageIdx = 2;
         } else if (p.life > 0.2) {
-          // life 0.5→0.2: light gray smoke (#777→#aaa), large, alpha 0.3
-          const t = 1 - (p.life - 0.2) / 0.3;
-          const gray = Math.round(0x77 + (0xaa - 0x77) * t);
-          r = gray; g = gray; b = gray;
           alpha = 0.3;
           drawR = p.size;
+          stageIdx = 3;
         } else {
-          // life 0.2→0.0: fading to transparent, extra large
-          r = 170; g = 170; b = 170;
           alpha = (p.life / 0.2) * 0.3;
           drawR = p.size;
+          stageIdx = 4;
         }
 
         ctx.globalAlpha = Math.min(alpha, 1);
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, drawR);
-        grad.addColorStop(0, `rgb(${r},${g},${b})`);
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, drawR, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.drawImage(particleGradientCache[stageIdx], p.x - drawR, p.y - drawR, drawR * 2, drawR * 2);
       }
       ctx.globalAlpha = 1.0;
 
@@ -848,14 +879,14 @@
       const hudRow1Y = 30;
       const scoreText = '1 NMR ≈ $' + game.score;
 
-      // Tier name - left aligned (tier-colored, bold)
+      // Tier name - left aligned (tier-colored, bold, with accessibility symbol prefix)
       ctx.font = 'bold 20px Courier New, monospace';
       ctx.textAlign = 'left';
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#000000';
-      ctx.strokeText(tier.name.toUpperCase(), hudPad, hudRow1Y);
+      ctx.strokeText(TIER_SYMBOLS[tier.index] + ' ' + tier.name.toUpperCase(), hudPad, hudRow1Y);
       ctx.fillStyle = tier.color;
-      ctx.fillText(tier.name.toUpperCase(), hudPad, hudRow1Y);
+      ctx.fillText(TIER_SYMBOLS[tier.index] + ' ' + tier.name.toUpperCase(), hudPad, hudRow1Y);
 
       // Score - right aligned
       ctx.font = 'bold 20px Courier New, monospace';
@@ -931,12 +962,12 @@
       ctx.fillStyle = '#ff6b6b';
       ctx.fillText('GAME OVER', LOGICAL_WIDTH / 2, panelY + 57);
 
-      // TIER (matches HUD left style — bold 20px, tier colour + black outline)
+      // TIER (matches HUD left style — bold 20px, tier colour + black outline, with symbol)
       ctx.font = 'bold 20px Courier New, monospace';
       ctx.lineWidth = 2;
-      ctx.strokeText('TIER: ' + deathTier.name.toUpperCase(), LOGICAL_WIDTH / 2, panelY + 112);
+      ctx.strokeText('TIER: ' + TIER_SYMBOLS[deathTier.index] + ' ' + deathTier.name.toUpperCase(), LOGICAL_WIDTH / 2, panelY + 112);
       ctx.fillStyle = deathTier.color;
-      ctx.fillText('TIER: ' + deathTier.name.toUpperCase(), LOGICAL_WIDTH / 2, panelY + 112);
+      ctx.fillText('TIER: ' + TIER_SYMBOLS[deathTier.index] + ' ' + deathTier.name.toUpperCase(), LOGICAL_WIDTH / 2, panelY + 112);
 
       // Score (tight 10px gap below TIER)
       ctx.font = 'bold 24px Courier New, monospace';

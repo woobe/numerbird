@@ -73,10 +73,10 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.6 — Game Over Panel Refinement + Menu Refresh + Visual Overhaul (current)
+### v0.6.1 — Bugfixes, accessibility, code quality & polish (current)
 
-**Bugfixes (Phase 1):**
-- 🐛 **Version footer ghost fixed** — stroked "v0.5" text removed, now renders clean "v0.6"
+**Phase 1 (Bugfixes):**
+- 🐛 **Version footer ghost fixed** — stroked "v0.5" text removed, now renders clean "v0.6.1"
 - 🐛 **Score-pop rainbow glow fixed** — `rainbowHue` now cycles through colours instead of staying red
 - 🐛 **Dead code removed** — unused `game.streaks` and orphaned `game.ripples` rendering cleaned out
 - 🐛 **Alternative jump keys added** — Arrow Up and `W` now work alongside Space
@@ -85,7 +85,27 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 - 🐛 **Audio creation hardened** — `new AudioContext()` wrapped in try/catch
 - 🐛 **Image loading errors logged** — `onerror` handlers added for player and background images
 
-- 🎯 **TIER→Score tight gap** — 10px spacing groups TIER and Score together in the Game Over panel
+**Phase 2 (Accessibility):**
+- ♿ **ARIA labels** — `role="img"` and `aria-label` added to canvas for screen readers
+- ♿ **prefers-reduced-motion** — screen shake, CRT scanlines, and particles now respect the user's motion preference
+
+**Phase 3 (Code Quality & Mobile):**
+- 🔧 **Magic number extracted** — `16.667` replaced with named `DT_TO_MS` constant
+- 🔧 **getTier() caching** — redundant per-frame calls eliminated
+- 📱 **touch-action: manipulation** — CSS added to eliminate 300ms mobile tap delay
+- 📱 **Landscape overlay** — prompts users to rotate to portrait on narrow screens
+- 🔧 **Resize debounced** — `resizeCanvas` now debounced at 100ms to prevent flicker
+- 🔧 **bgOffset clamped** — unbounded growth wrapped with modulo
+
+**Phase 4 (Performance & Polish):**
+- 🎨 **Particle gradients cached** — pre-rendered gradient palette replaces 12,000 per-frame gradient creations
+- 🎨 **CRT scanlines pre-rendered** — offscreen canvas replaces 150 draw calls with single `drawImage`
+- 📱 **Minimum canvas size guard** — clamped at 200×300 for small viewports
+- ♿ **Tier-name symbols** — geometric shapes alongside tier names for colour-blind accessibility
+- 📱 **PWA manifest** — `manifest.webmanifest` + iOS `apple-mobile-web-app-capable` meta tags
+- 🏷️ Version footer bumped to v0.6.1
+
+### v0.6 — Game Over Panel Refinement + Menu Refresh + Visual Overhaul
 - 🔲 **Heavier obstacle outlines** — candlestick black border increased 2→3px for better visibility
 - 🏆 **Menu: "Best Score" label** — ATH on menu screen renamed to "Best Score: 1 NMR ≈ $" and moved to top of screen (30px from top edge)
 - 🖼️ **New background** — `assets/background.jpg` replaced with an updated tile
