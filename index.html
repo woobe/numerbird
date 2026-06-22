@@ -370,8 +370,7 @@
       redStreakLength: 0,
       redDriftDirection: 0,
       obstacleCountInTier: 0,
-      skinsInTier: 0,
-      greenStartCount: 2, // first 2 obstacles always green, no skin
+      greenStartCount: 1, // randomised 1-3 in resetGame()
     };
 
     // --- Player ---
@@ -406,12 +405,11 @@
       game.darkHole = null;
       game.screenFlash = 0;
       game.glowIntensity = 0;
-      game.redStreakStart = 4 + Math.floor(Math.random() * 2);  // bars 4-6 in first tier, keeping 1-3 green
+      game.redStreakStart = 1 + Math.floor(Math.random() * 7);  // random position 1-7 in first tier
       game.redStreakLength = 3;
       game.redDriftDirection = 0;
       game.obstacleCountInTier = 0;
-      game.skinsInTier = 0;
-      game.greenStartCount = 2;
+      game.greenStartCount = 1 + Math.floor(Math.random() * 3);
 
       game.lastGapY = null;
       player.tiltAngle = 0;
@@ -526,19 +524,12 @@
         // (no gapY shift)
       }
 
-      // Skin frequency: at least 1 per tier, max 2 (non-red only)
+      // Skin frequency: flat 15% chance (non-red only)
       let hasSkin = false;
       if (game.greenStartCount > 0) {
         game.greenStartCount--;
       } else if (!isRedStreak) {
-        if (game.skinsInTier >= 2) {
-          hasSkin = false;
-        } else if (game.skinsInTier === 0 && game.obstacleCountInTier >= 5) {
-          hasSkin = true; // force first by mid-tier
-        } else {
-          hasSkin = Math.random() < 0.15;
-        }
-        if (hasSkin) game.skinsInTier++;
+        hasSkin = Math.random() < 0.10;
       }
 
       game.obstacles.push({
@@ -752,10 +743,9 @@
               sfxLevelUp();
               game.comboCount = 0;
               // Start a new 3-bar red streak: bars 2-5 within this tier
-              game.redStreakStart = 2 + Math.floor(Math.random() * 4);
+              game.redStreakStart = 1 + Math.floor(Math.random() * 7);
               game.redStreakLength = 3;
               game.obstacleCountInTier = 0;
-              game.skinsInTier = 0;
             }
             // Regular score sound
             sfxDing();
@@ -1031,9 +1021,9 @@
       ctx.textAlign = 'center';
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#000000';
-      ctx.strokeText('Prototype v0.6.6', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
+      ctx.strokeText('Prototype v0.6.7', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.60)';
-      ctx.fillText('Prototype v0.6.6', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
+      ctx.fillText('Prototype v0.6.7', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
     }
 
     function drawGame() {

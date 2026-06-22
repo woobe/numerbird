@@ -73,7 +73,14 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.6.6 — Dramatic progress bar + glow threshold (current)
+### v0.6.7 — More random obstacle ordering (current)
+
+- 🎲 **Green start randomised** — first 1-3 obstacles are safe green bars (was fixed 2)
+- 🎲 **Red streak position randomised** — 3 red bars appear anywhere in bars 1-7 per tier (was narrow 4-6 / 2-5 ranges)
+- 🎲 **Skin obstacles reduced to 10%** — flat chance per eligible bar, no per-tier min/max (was 15% with forced minimum)
+- 🏷️ Version footer bumped to v0.6.7
+
+### v0.6.6 — Dramatic progress bar + glow threshold
 
 - 📊 **Bar glow at 7+ blocks** — tier-coloured shadow glow appears behind the filled bar, intensity doubles at 9 blocks
 - ⬜ **Block 7-8 whitening** — blocks shift from tier colour to bright white in the end zone
