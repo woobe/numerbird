@@ -410,8 +410,25 @@
 
     // --- Obstacle skin assets ---
     const obstacleTopImg = new Image();
-    obstacleTopImg.src = 'assets/column_rc_top.png';
     const obstacleBotImg = new Image();
+    let obstacleTopBlack = null;
+    let obstacleBotBlack = null;
+
+    function makeBlackSprite(img) {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth || 60;
+      c.height = img.naturalHeight || 310;
+      const cx = c.getContext('2d');
+      cx.drawImage(img, 0, 0);
+      cx.globalCompositeOperation = 'source-atop';
+      cx.fillStyle = '#000000';
+      cx.fillRect(0, 0, c.width, c.height);
+      cx.globalCompositeOperation = 'source-over';
+      return c;
+    }
+    obstacleTopImg.onload = () => { obstacleTopBlack = makeBlackSprite(obstacleTopImg); };
+    obstacleTopImg.src = 'assets/column_rc_top.png';
+    obstacleBotImg.onload = () => { obstacleBotBlack = makeBlackSprite(obstacleBotImg); };
     obstacleBotImg.src = 'assets/column_rc_bot.png';
     // --- Player asset ---
     // Image is loaded below and wired into drawGame()
@@ -920,17 +937,17 @@
           ctx.beginPath();
           ctx.rect(obs.x, 0, obs.width, topHeight);
           ctx.clip();
-          // 3px black outline tracing the sprite edge (offset blit)
-          ctx.filter = 'brightness(0)';
-          ctx.drawImage(obstacleTopImg, obs.x - 3, topHeight - 310);
-          ctx.drawImage(obstacleTopImg, obs.x + 3, topHeight - 310);
-          ctx.drawImage(obstacleTopImg, obs.x, topHeight - 313);
-          ctx.drawImage(obstacleTopImg, obs.x, topHeight - 307);
-          ctx.drawImage(obstacleTopImg, obs.x - 2, topHeight - 312);
-          ctx.drawImage(obstacleTopImg, obs.x + 2, topHeight - 312);
-          ctx.drawImage(obstacleTopImg, obs.x - 2, topHeight - 308);
-          ctx.drawImage(obstacleTopImg, obs.x + 2, topHeight - 308);
-          ctx.filter = 'none';
+          // 3px black outline tracing the sprite edge (offset blit with pre-rendered black sprite)
+          if (obstacleTopBlack) {
+            ctx.drawImage(obstacleTopBlack, obs.x - 3, topHeight - 310);
+            ctx.drawImage(obstacleTopBlack, obs.x + 3, topHeight - 310);
+            ctx.drawImage(obstacleTopBlack, obs.x, topHeight - 313);
+            ctx.drawImage(obstacleTopBlack, obs.x, topHeight - 307);
+            ctx.drawImage(obstacleTopBlack, obs.x - 2, topHeight - 312);
+            ctx.drawImage(obstacleTopBlack, obs.x + 2, topHeight - 312);
+            ctx.drawImage(obstacleTopBlack, obs.x - 2, topHeight - 308);
+            ctx.drawImage(obstacleTopBlack, obs.x + 2, topHeight - 308);
+          }
           ctx.drawImage(obstacleTopImg, obs.x, topHeight - 310);
           ctx.restore();
         }
@@ -965,17 +982,17 @@
           ctx.beginPath();
           ctx.rect(obs.x, bottomY, obs.width, LOGICAL_HEIGHT - bottomY);
           ctx.clip();
-          // 3px black outline tracing the sprite edge (offset blit)
-          ctx.filter = 'brightness(0)';
-          ctx.drawImage(obstacleBotImg, obs.x - 3, bottomY);
-          ctx.drawImage(obstacleBotImg, obs.x + 3, bottomY);
-          ctx.drawImage(obstacleBotImg, obs.x, bottomY - 3);
-          ctx.drawImage(obstacleBotImg, obs.x, bottomY + 3);
-          ctx.drawImage(obstacleBotImg, obs.x - 2, bottomY - 2);
-          ctx.drawImage(obstacleBotImg, obs.x + 2, bottomY - 2);
-          ctx.drawImage(obstacleBotImg, obs.x - 2, bottomY + 2);
-          ctx.drawImage(obstacleBotImg, obs.x + 2, bottomY + 2);
-          ctx.filter = 'none';
+          // 3px black outline tracing the sprite edge (offset blit with pre-rendered black sprite)
+          if (obstacleBotBlack) {
+            ctx.drawImage(obstacleBotBlack, obs.x - 3, bottomY);
+            ctx.drawImage(obstacleBotBlack, obs.x + 3, bottomY);
+            ctx.drawImage(obstacleBotBlack, obs.x, bottomY - 3);
+            ctx.drawImage(obstacleBotBlack, obs.x, bottomY + 3);
+            ctx.drawImage(obstacleBotBlack, obs.x - 2, bottomY - 2);
+            ctx.drawImage(obstacleBotBlack, obs.x + 2, bottomY - 2);
+            ctx.drawImage(obstacleBotBlack, obs.x - 2, bottomY + 2);
+            ctx.drawImage(obstacleBotBlack, obs.x + 2, bottomY + 2);
+          }
           ctx.drawImage(obstacleBotImg, obs.x, bottomY);
           ctx.restore();
         }

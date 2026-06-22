@@ -76,7 +76,7 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 ### v0.6.4 — Obstacle skin swaps + polish (current)
 
 - 🖼️ **Obstacle skin swaps** — ~12% of non-red obstacles render with sprite-based art (`column_rc_top.png` / `column_rc_bot.png`) instead of gradient candlesticks, at natural size clipped to bar bounds
-- 🎨 **3px black outline** — sprite-edge outline via offset blit traces the alpha edge of the column art
+- 🎨 **3px black outline** — sprite-edge outline via pre-rendered black sprite offset blit (replaced `brightness(0)` filter for iOS Safari compatibility)
 - 🟢 **Green start** — first 2 obstacles always green, no skin, for a smooth opening
 - 📊 **Minimum bar height** — bumped to 90px for better sprite visibility on short bars
 - 🔤 **Tier symbols updated** — Apprentice=-, Contributor=●, Researcher=▲, Expert=■, Master=◆, Grandmaster=★
