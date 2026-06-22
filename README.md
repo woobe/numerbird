@@ -73,7 +73,16 @@ Then in your repo **Settings → Pages → Build and deployment → Source: Depl
 
 ## Changelog
 
-### v0.6.4 — Obstacle skin swaps + polish (current)
+### v0.6.5 — Glass shatter death effect (current)
+
+- 💥 **Death explosion** — expanding fireball, 3 staggered fire rings, 50 additive sparks, screen flash
+- 🪟 **Glass shatter cracks** — 16 branching radial cracks (80–160px) + 40 dense short cracks + 80px dark hole at impact
+- 🎨 **3D crack rendering** — shadow/groove/highlight layers with opposite offsets for a realistic glass groove illusion
+- ⏱️ **Death animation window** — 40-frame overlay delay so effects play before game over panel appears
+- 🐛 **Green start fixed** — `greenStartCount` now resets on game restart (was persisting after first game)
+- 🏷️ Version footer bumped to v0.6.5
+
+### v0.6.4 — Obstacle skin swaps + polish
 
 - 🖼️ **Obstacle skin swaps** — ~12% of non-red obstacles render with sprite-based art (`column_rc_top.png` / `column_rc_bot.png`) at natural size, clipped to bar bounds, no outline
 - 🟢 **Green start** — first 2 obstacles always green, no skin, for a smooth opening

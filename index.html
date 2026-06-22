@@ -357,9 +357,13 @@
       rainbowHue: 0,
       bgOffset: 0,
       particles: [],
+      deathFireball: null,
       rings: [],
       sparks: [],
+      cracks: [],
+      darkHole: null,
       screenFlash: 0,
+      overlayTimer: 0,
       glowIntensity: 0,
       redStreakStart: -1,
       redStreakLength: 0,
@@ -388,6 +392,7 @@
       game.spawnTimer = 0;
       game.spawnInterval = SPAWN_INTERVAL_MIN;
       game.particles = [];
+      game.deathFireball = null;
       game.scorePopTimer = 0;
       game.deathTimer = 0;
       game.bgOffset = 0;
@@ -395,6 +400,8 @@
 
       game.rings = [];
       game.sparks = [];
+      game.cracks = [];
+      game.darkHole = null;
       game.screenFlash = 0;
       game.glowIntensity = 0;
       game.redStreakStart = 4 + Math.floor(Math.random() * 2);  // bars 4-6 in first tier, keeping 1-3 green
@@ -402,6 +409,7 @@
       game.redDriftDirection = 0;
       game.obstacleCountInTier = 0;
       game.skinsInTier = 0;
+      game.greenStartCount = 2;
 
       game.lastGapY = null;
       player.tiltAngle = 0;
@@ -446,6 +454,7 @@
         sfxRibbit();
         player.velocityY = JUMP_VELOCITY;
       } else if (game.state === State.GAME_OVER) {
+        if (game.overlayTimer > 0) return; // wait for death animation to finish
         game.state = State.MENU;
         game.deathTimer = 0;
       }
@@ -541,6 +550,111 @@
       });
     }
 
+    // --- Death effects ---
+    function triggerDeathEffects() {
+      const cx = player.x + PLAYER_WIDTH / 2;
+      const cy = player.y + PLAYER_HEIGHT / 2;
+      // Expanding fireball
+      game.deathFireball = { x: cx, y: cy, radius: 0, maxRadius: 200, timer: 20, duration: 20 };
+      // Firework ring burst — 3 staggered fire-coloured rings
+      const burstRings = [
+        { maxR: 200, t: 30, d: 30, c: '#ff4400', sw: 8, sa: 0.8 },
+        { maxR: 160, t: 22, d: 30, c: '#ff8800', sw: 6, sa: 0.6 },
+        { maxR: 140, t: 15, d: 30, c: '#ffcc00', sw: 4, sa: 0.4 },
+      ];
+      for (const br of burstRings) {
+        game.rings.push({
+          x: cx, y: cy,
+          radius: 0, maxRadius: br.maxR,
+          timer: br.t, duration: br.d,
+          color: br.c,
+          startWidth: br.sw, endWidth: 1,
+          startAlpha: br.sa, endAlpha: 0.0,
+        });
+      }
+      // Screen flash
+      game.screenFlash = 8;
+      // Death spark burst — 50 sparks fly outward in all directions
+      for (let i = 0; i < 50; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 8 + Math.random() * 12;
+        game.sparks.push({
+          x: cx + (Math.random() - 0.5) * 10,
+          y: cy + (Math.random() - 0.5) * 10,
+          life: 0.6 + Math.random() * 0.6,
+          maxLife: 0,
+          size: 2 + Math.random() * 4,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 3,
+        });
+        const sp = game.sparks[game.sparks.length - 1];
+        sp.maxLife = sp.life;
+      }
+      // Delay game over overlay by ~40 frames so death effects are visible
+      game.overlayTimer = 40;
+      // Procedural glass crack lines — 16 main cracks + branches, dramatic shatter
+      game.cracks = [];
+      for (let i = 0; i < 16; i++) {
+        const baseAngle = Math.random() * Math.PI * 2;
+        const length = 80 + Math.random() * 80;
+        const segments = 4 + Math.floor(Math.random() * 3);
+        const points = [{ x: cx, y: cy }];
+        let segAngle = baseAngle;
+        for (let s = 1; s <= segments; s++) {
+          const t = s / segments;
+          const r = length * t;
+          segAngle += (Math.random() - 0.5) * 0.5; // gradual direction wander
+          const jitter = (1 - t) * 35 + 8;
+          points.push({
+            x: cx + Math.cos(segAngle) * r + (Math.random() - 0.5) * jitter,
+            y: cy + Math.sin(segAngle) * r + (Math.random() - 0.5) * jitter,
+          });
+        }
+        game.cracks.push({ points, life: 1.0 });
+        // Branch: 60% chance, splits off at a mid-point
+        if (Math.random() < 0.6) {
+          const branchAt = 2 + Math.floor(Math.random() * (segments - 2)); // segment index to branch from
+          const bp = points[branchAt];
+          const branchAngle = segAngle + (Math.random() < 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.8);
+          const branchLen = length * (0.4 + Math.random() * 0.3);
+          const branchSegs = 2 + Math.floor(Math.random() * 2);
+          const branchPoints = [{ x: bp.x, y: bp.y }];
+          let bAngle = branchAngle;
+          for (let s = 1; s <= branchSegs; s++) {
+            const t = s / branchSegs;
+            const r = branchLen * t;
+            bAngle += (Math.random() - 0.5) * 0.6;
+            const jitter = (1 - t) * 25 + 5;
+            branchPoints.push({
+              x: bp.x + Math.cos(bAngle) * r + (Math.random() - 0.5) * jitter,
+              y: bp.y + Math.sin(bAngle) * r + (Math.random() - 0.5) * jitter,
+            });
+          }
+          game.cracks.push({ points: branchPoints, life: 1.0 });
+        }
+      }
+      // Growing dark hole at impact (broken-through glass)
+      game.darkHole = { x: cx, y: cy, radius: 0, maxRadius: 80, timer: 22, duration: 22 };
+      // Dense short cracks around the hole (40 lines, 30-70px)
+      for (let i = 0; i < 40; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const length = 30 + Math.random() * 40;
+        const segs = 2 + Math.floor(Math.random() * 2);
+        const pts = [{ x: cx, y: cy }];
+        let a = angle;
+        for (let s = 1; s <= segs; s++) {
+          const t = s / segs;
+          const r = length * t;
+          a += (Math.random() - 0.5) * 0.7;
+          pts.push({
+            x: cx + Math.cos(a) * r + (Math.random() - 0.5) * 12,
+            y: cy + Math.sin(a) * r + (Math.random() - 0.5) * 12,
+          });
+        }
+        game.cracks.push({ points: pts, life: 1.0 });
+      }
+    }
+
     // --- Update ---
     function update(dt) {
       if (game.state === State.PLAYING) {
@@ -559,6 +673,7 @@
         if (player.y + player.height > LOGICAL_HEIGHT) {
           player.y = LOGICAL_HEIGHT - player.height;
           sfxDeath();
+          triggerDeathEffects();
           game.state = State.GAME_OVER;
         }
 
@@ -649,6 +764,7 @@
 
           if (checkCollision(player, topBar) || checkCollision(player, bottomBar)) {
             sfxDeath();
+            triggerDeathEffects();
             game.state = State.GAME_OVER;
           }
 
@@ -728,21 +844,30 @@
             sp.maxLife = sp.life;
           }
         }
-        // Update sparks
-        for (let i = game.sparks.length - 1; i >= 0; i--) {
-          const s = game.sparks[i];
-          s.x += s.vx * dt;
-          s.y += s.vy * dt;
-          s.vy += 0.05 * dt; // slight downward drift
-          s.life -= 0.02 * dt;
-          if (s.life <= 0) {
-            game.sparks.splice(i, 1);
-          }
-        }
 
         // Smooth tilt: lerp toward velocity-based target
         const targetTilt = player.velocityY * 0.025;
         player.tiltAngle += (targetTilt - player.tiltAngle) * 0.15;
+      }
+
+      // Update sparks (outside PLAYING so death sparks animate in GAME_OVER too)
+      for (let i = game.sparks.length - 1; i >= 0; i--) {
+        const s = game.sparks[i];
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.vy += 0.05 * dt; // slight downward drift
+        s.life -= 0.02 * dt;
+        if (s.life <= 0) {
+          game.sparks.splice(i, 1);
+        }
+      }
+
+      // Update death fireball (outside PLAYING so it animates in GAME_OVER too)
+      if (game.deathFireball) {
+        const fb = game.deathFireball;
+        fb.timer -= dt;
+        fb.radius = fb.maxRadius * (1 - fb.timer / fb.duration);
+        if (fb.timer <= 0) game.deathFireball = null;
       }
 
       // Track death timer for shake/flash effect
@@ -770,6 +895,28 @@
       if (game.screenFlash > 0) {
         game.screenFlash -= dt;
         if (game.screenFlash < 0) game.screenFlash = 0;
+      }
+
+      // Game over overlay delay timer
+      if (game.overlayTimer > 0) {
+        game.overlayTimer -= dt;
+        if (game.overlayTimer < 0) game.overlayTimer = 0;
+      }
+
+      // Crack lines fade (only during death animation — freeze once overlay shows)
+      if (game.overlayTimer > 0) {
+        for (let i = game.cracks.length - 1; i >= 0; i--) {
+          game.cracks[i].life -= 0.009 * dt;
+          if (game.cracks[i].life <= 0) {
+            game.cracks.splice(i, 1);
+          }
+        }
+        // Dark hole expansion
+        if (game.darkHole) {
+          game.darkHole.timer -= dt;
+          game.darkHole.radius = game.darkHole.maxRadius * (1 - game.darkHole.timer / game.darkHole.duration);
+          if (game.darkHole.timer <= 0) game.darkHole = null;
+        }
       }
 
       // Glow intensity fade (spikes on tier promotion, decays to steady 8)
@@ -810,7 +957,7 @@
         drawGame();
       }
 
-      if (game.state === State.GAME_OVER) {
+      if (game.state === State.GAME_OVER && game.overlayTimer <= 0) {
         drawGameOver();
       }
 
@@ -875,9 +1022,9 @@
       ctx.textAlign = 'center';
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#000000';
-      ctx.strokeText('Prototype v0.6.4', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
+      ctx.strokeText('Prototype v0.6.5', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.60)';
-      ctx.fillText('Prototype v0.6.4', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
+      ctx.fillText('Prototype v0.6.5', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT - 15);
     }
 
     function drawGame() {
@@ -1036,6 +1183,65 @@
         }
       }
       ctx.globalAlpha = 1.0;
+
+      // --- Death fireball ---
+      if (game.deathFireball) {
+        const fb = game.deathFireball;
+        const grad = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.radius);
+        grad.addColorStop(0, 'rgba(255, 200, 50, 0.8)');
+        grad.addColorStop(0.3, 'rgba(255, 100, 20, 0.6)');
+        grad.addColorStop(0.7, 'rgba(200, 30, 0, 0.3)');
+        grad.addColorStop(1, 'rgba(200, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(fb.x, fb.y, fb.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- Dark hole (broken-through glass) ---
+      if (game.darkHole) {
+        const dh = game.darkHole;
+        const holeGrad = ctx.createRadialGradient(dh.x, dh.y, 0, dh.x, dh.y, dh.radius);
+        holeGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        holeGrad.addColorStop(0.3, 'rgba(0, 0, 0, 0)');
+        holeGrad.addColorStop(0.45, 'rgba(5, 5, 10, 0.7)');
+        holeGrad.addColorStop(0.7, 'rgba(10, 14, 23, 0.3)');
+        holeGrad.addColorStop(1, 'rgba(10, 14, 23, 0)');
+        ctx.fillStyle = holeGrad;
+        ctx.beginPath();
+        ctx.arc(dh.x, dh.y, dh.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- Crack lines (glass shatter effect) ---
+      for (const c of game.cracks) {
+        if (c.life <= 0) continue;
+        const alpha = c.life * 0.85;
+        // Build path once, stroke three times with opposite offsets for 3D groove
+        ctx.beginPath();
+        ctx.moveTo(c.points[0].x, c.points[0].y);
+        for (let p = 1; p < c.points.length; p++) {
+          ctx.lineTo(c.points[p].x, c.points[p].y);
+        }
+        // Shadow line (offset up-left) — dark side of the groove
+        ctx.save();
+        ctx.translate(-1.5, -1.5);
+        ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.6})`;
+        ctx.lineWidth = Math.max(0.5, 2 * c.life);
+        ctx.stroke();
+        ctx.restore();
+        // Groove line (centered) — dark gray crack core
+        ctx.strokeStyle = `rgba(20, 25, 35, ${alpha * 0.8})`;
+        ctx.lineWidth = Math.max(0.5, 1.5 * c.life);
+        ctx.stroke();
+        // Highlight line (offset down-right) — light catches the opposite edge
+        ctx.save();
+        ctx.translate(1.5, 1.5);
+        ctx.strokeStyle = `rgba(180, 210, 240, ${alpha * 0.7})`;
+        ctx.lineWidth = Math.max(0.3, 1 * c.life);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Get current tier info (used for glow colour & progress bar)
       const tier = getTier();
